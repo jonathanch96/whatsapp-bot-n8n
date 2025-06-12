@@ -1,5 +1,5 @@
 require('dotenv').config(); // Load .env
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia  } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const express = require('express');
 const axios = require('axios');
@@ -28,26 +28,41 @@ client.on('ready', () => {
     console.log('Client is ready!');
 });
 
-client.on('message', async msg => {
-    if (msg.body == '!ping') {
+client.on('message', async (msg) => {
+    if (msg.body === '!ping') {
         msg.reply('pong');
     }
-    // Forward to n8n webhook
+
     const webhookUrl = process.env.N8N_WEBHOOK_URL;
-    console.log(webhookUrl)
-    if (webhookUrl) {
+    if (!webhookUrl) return;
+
+    let mediaData = null;
+
+    if (msg.hasMedia) {
         try {
-            await axios.post(webhookUrl, {
-                from: msg.from,
-                to: msg.to,
-                body: msg.body,
-                timestamp: msg.timestamp,
-                type: msg.type,
-                id: msg.id._serialized,
-            });
-        } catch (error) {
-            console.error('Error forwarding to n8n webhook:', error.message);
+            const media = await msg.downloadMedia();
+            mediaData = {
+                mimetype: media.mimetype,
+                data: media.data, // base64 string
+                filename: media.filename || 'media', // optional
+            };
+        } catch (err) {
+            console.error('Error downloading media:', err.message);
         }
+    }
+
+    try {
+        await axios.post(webhookUrl, {
+            from: msg.from,
+            to: msg.to,
+            body: msg.body,
+            timestamp: msg.timestamp,
+            type: msg.type,
+            id: msg.id._serialized,
+            media: mediaData, // attach media if exists
+        });
+    } catch (error) {
+        console.error('Error forwarding to n8n webhook:', error.message);
     }
 });
 
