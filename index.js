@@ -39,6 +39,7 @@ client.on('message', async (msg) => {
   let mediaData = null
 
   try {
+    console.log('msg:', msg)
     const media = await msg.downloadMedia()
     if (media) {
       console.log('[DEBUG] Media downloaded:', {
