@@ -9,7 +9,7 @@ services:
     volumes:
       - ./sessions:/app/sessions
     env_file:
-      - ./.env 
+      - .env 
     environment:
       - SESSION_PATH=/app/sessions
     networks:
