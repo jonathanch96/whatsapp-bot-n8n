@@ -36,26 +36,27 @@ client.on('message', async (msg) => {
   const webhookUrl = process.env.N8N_WEBHOOK_URL
   if (!webhookUrl) return
 
-  let mediaDataArray = []
+  let mediaData = null
 
-  if (msg.hasMedia || msg.type === 'image') {
-    try {
-      const media = await msg.downloadMedia()
-      if (media) {
-        mediaDataArray.push({
-          mimetype: media.mimetype,
-          data: media.data,
-          filename: media.filename || 'media',
-        })
+  try {
+    const media = await msg.downloadMedia()
+    if (media) {
+      console.log('[DEBUG] Media downloaded:', {
+        filename: media.filename,
+        mimetype: media.mimetype,
+        size: media.data.length,
+      })
+
+      mediaData = {
+        mimetype: media.mimetype,
+        data: media.data,
+        filename: media.filename || 'media',
       }
-    } catch (err) {
-      console.error('[ERROR] Failed to download media:', err.message)
+    } else {
+      console.log('[DEBUG] Media download returned null')
     }
-  }
-
-  //   does't support video and audio
-  if (msg.type === 'video' || msg.type === 'audio') {
-    return
+  } catch (err) {
+    console.error('[ERROR] Failed to download media:', err.message)
   }
 
   try {
@@ -66,7 +67,7 @@ client.on('message', async (msg) => {
       timestamp: msg.timestamp,
       type: msg.type,
       id: msg.id._serialized,
-      media: mediaDataArray,
+      media: mediaData, // attach media if exists
     })
   } catch (error) {
     console.error('Error forwarding to n8n webhook:', error.message)
